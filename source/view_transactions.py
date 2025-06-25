@@ -39,14 +39,11 @@ def search_transactions():
 
     account_id = accounts[account_name]
     initial_balance = get_initial_balance(account_name)
-    current_balance = initial_balance
 
     wb = openpyxl.load_workbook(EXCEL_FILE)
     ws = wb["取引履歴"]
-    records = []
-    total_deposit = 0
-    total_withdrawal = 0
-
+    
+    raw_records = []
     for row in ws.iter_rows(min_row=2, values_only=True):
         date_str, acc_id, summary, deposit, withdrawal = row
         if acc_id != account_id:
@@ -56,19 +53,32 @@ def search_transactions():
         except Exception:
             continue
         if start <= tx_date <= end:
-            deposit_amt = float(deposit or 0)
-            withdrawal_amt = float(withdrawal or 0)
-            current_balance += deposit_amt - withdrawal_amt
-            records.append([
-                date_str,
-                summary,
-                deposit if deposit else "",
-                withdrawal if withdrawal else "",
-                current_balance
-            ])
-            total_deposit += deposit_amt
-            total_withdrawal += withdrawal_amt
+            raw_records.append({
+                "date": tx_date,
+                "summary": summary,
+                "deposit": float(deposit or 0),
+                "withdrawal": float(withdrawal or 0)
+            })
     wb.close()
+
+    # 並び替え & 残高再計算
+    raw_records.sort(key=lambda r: r["date"])
+    current_balance = initial_balance
+    records = []
+    total_deposit = 0
+    total_withdrawal = 0
+
+    for r in raw_records:
+        current_balance += r["deposit"] - r["withdrawal"]
+        records.append([
+            r["date"].strftime("%Y-%m-%d"),
+            r["summary"],
+            r["deposit"] if r["deposit"] else "",
+            r["withdrawal"] if r["withdrawal"] else "",
+            current_balance
+        ])
+        total_deposit += r["deposit"]
+        total_withdrawal += r["withdrawal"]
 
     for row in tree.get_children():
         tree.delete(row)
@@ -79,7 +89,6 @@ def search_transactions():
     current_results = records
     final_balance = current_balance
 
-    # テキスト更新
     deposit_text.set(f"合計預入：{total_deposit:,.0f} 円")
     withdrawal_text.set(f"合計引出：{total_withdrawal:,.0f} 円")
     balance_text.set(f"残高：{current_balance:,.0f} 円")
@@ -159,7 +168,6 @@ for col in ("日付", "摘要", "預入", "引出", "残高"):
     tree.column(col, width=120, anchor="center", stretch=True)
 tree.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
 
-# 中央揃えで合計情報を1ラベルずつ表示
 tk.Label(root, textvariable=deposit_text, font=font_label).grid(row=5, column=0, columnspan=2, sticky="n", pady=2)
 tk.Label(root, textvariable=withdrawal_text, font=font_label).grid(row=6, column=0, columnspan=2, sticky="n", pady=2)
 tk.Label(root, textvariable=balance_text, font=("Arial", 14, "bold")).grid(row=7, column=0, columnspan=2, sticky="n", pady=5)
