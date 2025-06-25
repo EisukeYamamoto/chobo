@@ -2,8 +2,13 @@ import tkinter as tk
 from tkinter import messagebox
 import openpyxl
 import os
+import sys
 
 EXCEL_FILE = "database.xlsx"
+
+if not os.path.exists(EXCEL_FILE):
+    messagebox.showerror("ファイルエラー", f"{EXCEL_FILE} が見つかりません。")
+    sys.exit()
 
 def load_account_names():
     wb = openpyxl.load_workbook(EXCEL_FILE)
@@ -44,22 +49,41 @@ def add_account():
     wb.save(EXCEL_FILE)
     wb.close()
 
-    messagebox.showinfo("成功", f"{name} を追加しました")
+    messagebox.showinfo("成功", f"口座 '{name}' を登録しました\n初期残高: {balance:,.0f} 円")
     name_entry.delete(0, tk.END)
     balance_entry.delete(0, tk.END)
+
+def back_to_menu():
+    root.destroy()
 
 # --- GUI構築 ---
 root = tk.Tk()
 root.title("新しい口座の追加")
+root.geometry("500x300")
+root.minsize(400, 250)
 
-tk.Label(root, text="口座名").grid(row=0, column=0)
-name_entry = tk.Entry(root)
-name_entry.grid(row=0, column=1)
+for i in range(4):
+    root.grid_rowconfigure(i, weight=0)
+root.grid_rowconfigure(3, weight=1)
+root.grid_columnconfigure(0, weight=0)
+root.grid_columnconfigure(1, weight=1)
 
-tk.Label(root, text="初期残高").grid(row=1, column=0)
-balance_entry = tk.Entry(root)
-balance_entry.grid(row=1, column=1)
+font_label = ("Arial", 12)
+font_entry = ("Arial", 12)
+font_button = ("Arial", 12)
 
-tk.Button(root, text="口座を追加", command=add_account).grid(row=2, column=0, columnspan=2)
+# 口座名
+tk.Label(root, text="口座名", font=font_label).grid(row=0, column=0, padx=10, pady=10, sticky="e")
+name_entry = tk.Entry(root, font=font_entry)
+name_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+
+# 初期残高
+tk.Label(root, text="初期残高", font=font_label).grid(row=1, column=0, padx=10, pady=10, sticky="e")
+balance_entry = tk.Entry(root, font=font_entry)
+balance_entry.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
+
+# ボタン
+tk.Button(root, text="口座を追加", command=add_account, font=font_button).grid(row=2, column=0, columnspan=2, pady=10)
+tk.Button(root, text="メニューに戻る", command=back_to_menu, font=font_button).grid(row=3, column=0, columnspan=2, pady=10)
 
 root.mainloop()
