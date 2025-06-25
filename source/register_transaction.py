@@ -1,9 +1,17 @@
 import tkinter as tk
+from tkcalendar import DateEntry
 from tkinter import ttk, messagebox
 import openpyxl
 from datetime import datetime
+import os
+import sys
 
 EXCEL_FILE = "database.xlsx"
+
+# --- ファイル存在チェック ---
+if not os.path.exists(EXCEL_FILE):
+    messagebox.showerror("ファイルエラー", f"{EXCEL_FILE} が見つかりません。")
+    sys.exit()
 
 def load_accounts():
     wb = openpyxl.load_workbook(EXCEL_FILE)
@@ -23,10 +31,10 @@ def save_transaction(date_str, account_name, summary, deposit, withdrawal):
     wb.close()
 
 def register_transaction():
-    date_str = date_entry.get()
+    date_str = date_entry.get().strip()
     account_name = account_combo.get()
-    summary = summary_entry.get()
-    amount = amount_entry.get()
+    summary = summary_entry.get().strip()
+    amount = amount_entry.get().strip()
     mode = mode_var.get()
 
     if not (date_str and account_name and summary and amount):
@@ -42,24 +50,34 @@ def register_transaction():
     deposit = float_amount if mode == "預入" else ""
     withdrawal = float_amount if mode == "引出" else ""
 
-    save_transaction(date_str, account_name, summary, deposit, withdrawal)
-    messagebox.showinfo("登録完了", "取引が登録されました")
-
-    summary_entry.delete(0, tk.END)
-    amount_entry.delete(0, tk.END)
+    try:
+        save_transaction(date_str, account_name, summary, deposit, withdrawal)
+        messagebox.showinfo("登録完了", "取引が登録されました")
+        summary_entry.delete(0, tk.END)
+        amount_entry.delete(0, tk.END)
+    except Exception as e:
+        messagebox.showerror("登録エラー", f"保存中にエラーが発生しました：\n{e}")
 
 # --- GUIセットアップ ---
 root = tk.Tk()
 root.title("入出金登録")
+root.geometry("300x250")
 
-tk.Label(root, text="日付 (YYYY-MM-DD)").grid(row=0, column=0)
-date_entry = tk.Entry(root)
-date_entry.insert(0, datetime.today().strftime("%Y-%m-%d"))
+tk.Label(root, text="日付").grid(row=0, column=0)
+date_entry = DateEntry(root, date_pattern='yyyy-mm-dd')
 date_entry.grid(row=0, column=1)
 
 tk.Label(root, text="口座").grid(row=1, column=0)
-account_combo = ttk.Combobox(root, state="readonly", values=list(load_accounts().keys()))
+account_combo = ttk.Combobox(root, state="readonly")
 account_combo.grid(row=1, column=1)
+
+try:
+    accounts = load_accounts()
+    account_combo["values"] = list(accounts.keys())
+except Exception as e:
+    messagebox.showerror("口座読み込みエラー", f"口座一覧の読み込みに失敗しました\n{e}")
+    root.destroy()
+    sys.exit()
 
 tk.Label(root, text="摘要").grid(row=2, column=0)
 summary_entry = tk.Entry(root)
@@ -73,6 +91,6 @@ mode_var = tk.StringVar(value="預入")
 tk.Radiobutton(root, text="預入", variable=mode_var, value="預入").grid(row=4, column=0)
 tk.Radiobutton(root, text="引出", variable=mode_var, value="引出").grid(row=4, column=1)
 
-tk.Button(root, text="登録", command=register_transaction).grid(row=5, column=0, columnspan=2)
+tk.Button(root, text="登録", command=register_transaction).grid(row=5, column=0, columnspan=2, pady=10)
 
 root.mainloop()
