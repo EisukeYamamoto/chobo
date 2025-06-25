@@ -1,115 +1,78 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+import openpyxl
 from datetime import datetime
-from openpyxl import Workbook, load_workbook
-from openpyxl.utils import get_column_letter
-import os
 
-FILE_NAME = "records.xlsx"
-SHEET_NAME = "入出金記録"
+EXCEL_FILE = "database.xlsx"
 
-# Excelファイルを初期化（なければ作成）
-def initialize_excel():
-    if not os.path.exists(FILE_NAME):
-        wb = Workbook()
-        ws = wb.active
-        ws.title = SHEET_NAME
-        headers = ["日付", "口座名", "摘要", "預入額", "引出額"]
-        ws.append(headers)
-        wb.save(FILE_NAME)
+def load_accounts():
+    wb = openpyxl.load_workbook(EXCEL_FILE)
+    ws = wb["口座一覧"]
+    accounts = {}
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        accounts[row[1]] = row[0]  # 口座名:口座ID
+    wb.close()
+    return accounts
 
-# Excelに追記
-def add_record_to_excel(date, account, desc, deposit, withdraw):
-    wb = load_workbook(FILE_NAME)
-    ws = wb[SHEET_NAME]
-    ws.append([date, account, desc, deposit, withdraw])
-    wb.save(FILE_NAME)
+def save_transaction(date_str, account_name, summary, deposit, withdrawal):
+    wb = openpyxl.load_workbook(EXCEL_FILE)
+    account_id = load_accounts()[account_name]
+    ws = wb["取引履歴"]
+    ws.append([date_str, account_id, summary, deposit, withdrawal])
+    wb.save(EXCEL_FILE)
+    wb.close()
 
-# Excelから読み込み
-def load_records():
-    if not os.path.exists(FILE_NAME):
-        return []
-    wb = load_workbook(FILE_NAME)
-    ws = wb[SHEET_NAME]
-    return list(ws.iter_rows(min_row=2, values_only=True))
+def register_transaction():
+    date_str = date_entry.get()
+    account_name = account_combo.get()
+    summary = summary_entry.get()
+    amount = amount_entry.get()
+    mode = mode_var.get()
 
-# GUIアプリ
-class FinanceApp:
-    def __init__(self, root):
-        self.root = root
-        root.title("入出金管理アプリ")
-        self.create_widgets()
-        self.load_table()
+    if not (date_str and account_name and summary and amount):
+        messagebox.showwarning("入力エラー", "すべての項目を入力してください")
+        return
 
-    def create_widgets(self):
-        # フォーム
-        frm_input = ttk.Frame(self.root, padding=10)
-        frm_input.pack(fill=tk.X)
+    try:
+        float_amount = float(amount)
+    except ValueError:
+        messagebox.showwarning("金額エラー", "金額は数値で入力してください")
+        return
 
-        self.var_date = tk.StringVar(value=datetime.today().strftime('%Y-%m-%d'))
-        self.var_account = tk.StringVar()
-        self.var_desc = tk.StringVar()
-        self.var_deposit = tk.StringVar()
-        self.var_withdraw = tk.StringVar()
+    deposit = float_amount if mode == "預入" else ""
+    withdrawal = float_amount if mode == "引出" else ""
 
-        ttk.Label(frm_input, text="日付").grid(row=0, column=0)
-        ttk.Entry(frm_input, textvariable=self.var_date, width=12).grid(row=1, column=0)
+    save_transaction(date_str, account_name, summary, deposit, withdrawal)
+    messagebox.showinfo("登録完了", "取引が登録されました")
 
-        ttk.Label(frm_input, text="口座名").grid(row=0, column=1)
-        self.account_combo = ttk.Combobox(frm_input, textvariable=self.var_account, values=["〇〇銀行", "✕✕信金", "△△銀行"], width=15)
-        self.account_combo.grid(row=1, column=1)
+    summary_entry.delete(0, tk.END)
+    amount_entry.delete(0, tk.END)
 
-        ttk.Label(frm_input, text="摘要").grid(row=0, column=2)
-        ttk.Entry(frm_input, textvariable=self.var_desc, width=20).grid(row=1, column=2)
+# --- GUIセットアップ ---
+root = tk.Tk()
+root.title("入出金登録")
 
-        ttk.Label(frm_input, text="預入額").grid(row=0, column=3)
-        ttk.Entry(frm_input, textvariable=self.var_deposit, width=10).grid(row=1, column=3)
+tk.Label(root, text="日付 (YYYY-MM-DD)").grid(row=0, column=0)
+date_entry = tk.Entry(root)
+date_entry.insert(0, datetime.today().strftime("%Y-%m-%d"))
+date_entry.grid(row=0, column=1)
 
-        ttk.Label(frm_input, text="引出額").grid(row=0, column=4)
-        ttk.Entry(frm_input, textvariable=self.var_withdraw, width=10).grid(row=1, column=4)
+tk.Label(root, text="口座").grid(row=1, column=0)
+account_combo = ttk.Combobox(root, state="readonly", values=list(load_accounts().keys()))
+account_combo.grid(row=1, column=1)
 
-        ttk.Button(frm_input, text="登録", command=self.register_record).grid(row=1, column=5, padx=5)
+tk.Label(root, text="摘要").grid(row=2, column=0)
+summary_entry = tk.Entry(root)
+summary_entry.grid(row=2, column=1)
 
-        # テーブル
-        self.tree = ttk.Treeview(self.root, columns=("日付", "口座名", "摘要", "預入額", "引出額"), show="headings")
-        for col in self.tree["columns"]:
-            self.tree.heading(col, text=col)
-            self.tree.column(col, width=100, anchor=tk.CENTER)
-        self.tree.pack(fill=tk.BOTH, expand=True, pady=10)
+tk.Label(root, text="金額").grid(row=3, column=0)
+amount_entry = tk.Entry(root)
+amount_entry.grid(row=3, column=1)
 
-    def register_record(self):
-        date = self.var_date.get()
-        account = self.var_account.get()
-        desc = self.var_desc.get()
-        deposit = self.var_deposit.get()
-        withdraw = self.var_withdraw.get()
+mode_var = tk.StringVar(value="預入")
+tk.Radiobutton(root, text="預入", variable=mode_var, value="預入").grid(row=4, column=0)
+tk.Radiobutton(root, text="引出", variable=mode_var, value="引出").grid(row=4, column=1)
 
-        if not account:
-            messagebox.showwarning("入力エラー", "口座名を入力してください")
-            return
+tk.Button(root, text="登録", command=register_transaction).grid(row=5, column=0, columnspan=2)
 
-        try:
-            deposit_val = float(deposit) if deposit else 0.0
-            withdraw_val = float(withdraw) if withdraw else 0.0
-        except ValueError:
-            messagebox.showerror("数値エラー", "預入額・引出額には数値を入力してください")
-            return
-
-        add_record_to_excel(date, account, desc, deposit_val, withdraw_val)
-        self.load_table()
-        self.var_desc.set("")
-        self.var_deposit.set("")
-        self.var_withdraw.set("")
-
-    def load_table(self):
-        for row in self.tree.get_children():
-            self.tree.delete(row)
-        records = load_records()
-        for rec in records:
-            self.tree.insert("", tk.END, values=rec)
-
-if __name__ == "__main__":
-    initialize_excel()
-    root = tk.Tk()
-    app = FinanceApp(root)
-    root.mainloop()
+root.mainloop()
