@@ -28,11 +28,23 @@ def search_transactions():
         return
 
     account_id = accounts[account_name]
-    wb = openpyxl.load_workbook(EXCEL_FILE)
-    ws = wb["取引履歴"]
-    records = []
 
-    for row in ws.iter_rows(min_row=2, values_only=True):
+    # 初期残高の取得
+    wb = openpyxl.load_workbook(EXCEL_FILE)
+    ws_accounts = wb["口座一覧"]
+    initial_balance = 0
+    for row in ws_accounts.iter_rows(min_row=2, values_only=True):
+        if row[1] == account_name:
+            initial_balance = float(row[2])
+            break
+
+    # 履歴の読み込みとフィルタ
+    ws_tx = wb["取引履歴"]
+    records = []
+    total_deposit = 0
+    total_withdrawal = 0
+
+    for row in ws_tx.iter_rows(min_row=2, values_only=True):
         date_str, acc_id, summary, deposit, withdrawal = row
         if acc_id != account_id:
             continue
@@ -42,6 +54,9 @@ def search_transactions():
             continue
         if start <= tx_date <= end:
             records.append([date_str, summary, deposit or "", withdrawal or ""])
+            total_deposit += float(deposit or 0)
+            total_withdrawal += float(withdrawal or 0)
+
     wb.close()
 
     for row in tree.get_children():
@@ -51,6 +66,10 @@ def search_transactions():
 
     global current_results
     current_results = records
+
+    # 残高の更新
+    current_balance = initial_balance + total_deposit - total_withdrawal
+    balance_var.set(f"{current_balance:,.0f} 円")
 
 def export_to_excel():
     if not current_results:
@@ -91,6 +110,10 @@ for col in ("日付", "摘要", "預入", "引出"):
     tree.heading(col, text=col)
     tree.column(col, width=100)
 tree.grid(row=4, column=0, columnspan=2, padx=10, pady=10)
+
+balance_var = tk.StringVar(value="―")
+tk.Label(root, text="残高").grid(row=6, column=0)
+tk.Label(root, textvariable=balance_var, font=("Arial", 12, "bold")).grid(row=6, column=1)
 
 tk.Button(root, text="Excelに出力", command=export_to_excel).grid(row=5, column=0, columnspan=2)
 
