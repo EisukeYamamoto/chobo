@@ -78,9 +78,11 @@ def search_transactions():
     global current_results, final_balance
     current_results = records
     final_balance = current_balance
-    deposit_var.set(f"{total_deposit:,.0f} 円")
-    withdrawal_var.set(f"{total_withdrawal:,.0f} 円")
-    balance_var.set(f"{current_balance:,.0f} 円")
+
+    # テキスト更新
+    deposit_text.set(f"合計預入：{total_deposit:,.0f} 円")
+    withdrawal_text.set(f"合計引出：{total_withdrawal:,.0f} 円")
+    balance_text.set(f"残高：{current_balance:,.0f} 円")
 
 def export_to_excel():
     if not current_results:
@@ -105,14 +107,16 @@ def export_to_excel():
     df_out.to_excel(file_path, index=False)
     messagebox.showinfo("出力完了", f"{file_path} に出力しました")
 
+def back_to_menu():
+    root.destroy()
+
 # --- GUI構築 ---
 root = tk.Tk()
 root.title("取引履歴の参照と出力（残高付き）")
-root.geometry("900x600")
-root.minsize(1200, 600)
+root.geometry("800x600")
+root.minsize(600, 400)
 
-# 縦は row=4 (TreeView) のみ可変、横は column=1 が可変
-for i in range(9):
+for i in range(10):
     root.grid_rowconfigure(i, weight=0)
 root.grid_rowconfigure(4, weight=1)
 root.grid_columnconfigure(0, weight=0)
@@ -126,6 +130,10 @@ font_tree = ("Arial", 11)
 accounts = load_accounts()
 current_results = []
 final_balance = 0.0
+
+deposit_text = tk.StringVar(value="合計預入：―")
+withdrawal_text = tk.StringVar(value="合計引出：―")
+balance_text = tk.StringVar(value="残高：―")
 
 tk.Label(root, text="口座", font=font_label).grid(row=0, column=0, sticky="e", padx=5, pady=5)
 account_combo = ttk.Combobox(root, values=list(accounts.keys()), state="readonly", font=font_entry)
@@ -148,21 +156,15 @@ style.configure("Treeview", font=font_tree, rowheight=28)
 
 for col in ("日付", "摘要", "預入", "引出", "残高"):
     tree.heading(col, text=col)
-    tree.column(col, anchor="center", stretch=True)
+    tree.column(col, width=120, anchor="center", stretch=True)
 tree.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
 
-tk.Label(root, text="合計預入", font=font_label).grid(row=5, column=0, sticky="e")
-deposit_var = tk.StringVar(value="―")
-tk.Label(root, textvariable=deposit_var, font=font_entry).grid(row=5, column=1, sticky="w")
+# 中央揃えで合計情報を1ラベルずつ表示
+tk.Label(root, textvariable=deposit_text, font=font_label).grid(row=5, column=0, columnspan=2, sticky="n", pady=2)
+tk.Label(root, textvariable=withdrawal_text, font=font_label).grid(row=6, column=0, columnspan=2, sticky="n", pady=2)
+tk.Label(root, textvariable=balance_text, font=("Arial", 14, "bold")).grid(row=7, column=0, columnspan=2, sticky="n", pady=5)
 
-tk.Label(root, text="合計引出", font=font_label).grid(row=6, column=0, sticky="e")
-withdrawal_var = tk.StringVar(value="―")
-tk.Label(root, textvariable=withdrawal_var, font=font_entry).grid(row=6, column=1, sticky="w")
-
-tk.Label(root, text="残高", font=font_label).grid(row=7, column=0, sticky="e")
-balance_var = tk.StringVar(value="―")
-tk.Label(root, textvariable=balance_var, font=("Arial", 14, "bold")).grid(row=7, column=1, sticky="w")
-
-tk.Button(root, text="Excelに出力", command=export_to_excel, font=font_button).grid(row=8, column=0, columnspan=2, pady=15)
+tk.Button(root, text="Excelに出力", command=export_to_excel, font=font_button).grid(row=8, column=0, columnspan=2, pady=10)
+tk.Button(root, text="メニューに戻る", command=back_to_menu, font=font_button).grid(row=9, column=0, columnspan=2, pady=10)
 
 root.mainloop()

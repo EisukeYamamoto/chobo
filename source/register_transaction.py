@@ -86,15 +86,18 @@ def register_transaction():
     except Exception as e:
         messagebox.showerror("登録エラー", f"保存中にエラーが発生しました：\n{e}")
 
+def back_to_menu():
+    root.destroy()
+
 # --- GUIセットアップ ---
 root = tk.Tk()
 root.title("入出金登録")
-root.geometry("500x400")
+root.geometry("500x450")
 root.minsize(400, 300)
 
-for i in range(6):
+for i in range(7):
     root.grid_rowconfigure(i, weight=0)
-root.grid_rowconfigure(5, weight=1)
+root.grid_rowconfigure(6, weight=1)
 root.grid_columnconfigure(0, weight=0)
 root.grid_columnconfigure(1, weight=1)
 
@@ -129,15 +132,17 @@ tk.Label(root, text="金額", font=font_label).grid(row=3, column=0, padx=5, pad
 amount_entry = tk.Entry(root, font=font_entry)
 amount_entry.grid(row=3, column=1, padx=5, pady=5, sticky="ew")
 
-# 預入/引出
+# 預入/引出（中央揃え）
 mode_var = tk.StringVar(value="預入")
 mode_frame = tk.Frame(root)
 mode_frame.grid(row=4, column=0, columnspan=2, pady=10)
-
 tk.Radiobutton(mode_frame, text="預入", variable=mode_var, value="預入", font=font_entry).pack(side="left", padx=10)
 tk.Radiobutton(mode_frame, text="引出", variable=mode_var, value="引出", font=font_entry).pack(side="left", padx=10)
 
 # 登録ボタン
-tk.Button(root, text="登録", command=register_transaction, font=font_button).grid(row=5, column=0, columnspan=2, pady=15)
+tk.Button(root, text="登録", command=register_transaction, font=font_button).grid(row=5, column=0, columnspan=2, pady=10)
+
+# メニューに戻るボタン
+tk.Button(root, text="メニューに戻る", command=back_to_menu, font=font_button).grid(row=6, column=0, columnspan=2, pady=10)
 
 root.mainloop()
