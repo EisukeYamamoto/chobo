@@ -11,7 +11,6 @@ def show_register_multi_window():
         messagebox.showerror("ファイルエラー", f"{EXCEL_FILE} が見つかりません。")
         return
 
-    # 口座一覧を取得
     def load_accounts():
         wb = openpyxl.load_workbook(EXCEL_FILE)
         ws = wb["口座一覧"]
@@ -19,7 +18,6 @@ def show_register_multi_window():
         wb.close()
         return accounts
 
-    # Excelに保存
     def save_transactions(account_id, entries):
         wb = openpyxl.load_workbook(EXCEL_FILE)
         ws = wb["取引履歴"]
@@ -28,7 +26,6 @@ def show_register_multi_window():
         wb.save(EXCEL_FILE)
         wb.close()
 
-    # 現在残高取得
     def get_current_balance(account_id):
         wb = openpyxl.load_workbook(EXCEL_FILE)
         ws1 = wb["口座一覧"]
@@ -47,7 +44,30 @@ def show_register_multi_window():
         wb.close()
         return initial + deposit_total - withdrawal_total
 
-    # 登録処理
+    def show_confirmation(entries):
+        popup = tk.Toplevel()
+        popup.title("登録内容の確認")
+        popup.geometry("600x300")
+
+        font_header = ("Arial", 11, "bold")
+        font_row = ("Arial", 11)
+
+        header_frame = tk.Frame(popup)
+        header_frame.pack(fill="x", padx=10, pady=5)
+
+        for text, width in zip(["日付", "摘要", "預入", "引出"], [15, 25, 10, 10]):
+            tk.Label(header_frame, text=text, width=width, font=font_header, anchor="w").pack(side="left")
+
+        for entry in entries:
+            row_frame = tk.Frame(popup)
+            row_frame.pack(fill="x", padx=10)
+            tk.Label(row_frame, text=entry["date"], width=15, font=font_row, anchor="w").pack(side="left")
+            tk.Label(row_frame, text=entry["summary"], width=25, font=font_row, anchor="w").pack(side="left")
+            tk.Label(row_frame, text=entry["deposit"] if entry["deposit"] != "" else "", width=10, font=font_row, anchor="e").pack(side="left")
+            tk.Label(row_frame, text=entry["withdrawal"] if entry["withdrawal"] != "" else "", width=10, font=font_row, anchor="e").pack(side="left")
+
+        tk.Button(popup, text="閉じる", font=("Arial", 11), command=popup.destroy).pack(pady=10)
+
     def register_all():
         selected_account = account_combo.get()
         if not selected_account:
@@ -64,7 +84,7 @@ def show_register_multi_window():
             withdrawal = widgets[3].get().strip()
 
             if not (date_str and summary and (deposit or withdrawal)):
-                continue  # 空行スキップ
+                continue
 
             try:
                 input_date = datetime.strptime(date_str, "%Y-%m-%d")
@@ -95,6 +115,7 @@ def show_register_multi_window():
 
         try:
             save_transactions(account_id, all_entries)
+            show_confirmation(all_entries)
             balance = get_current_balance(account_id)
             messagebox.showinfo("登録完了", f"{len(all_entries)} 件登録しました。\n現在の残高: {balance:,.0f} 円")
             for widgets in rows:
@@ -122,7 +143,6 @@ def show_register_multi_window():
 
         rows.append((date_entry, summary_entry, deposit_entry, withdrawal_entry))
 
-    # ウィンドウ作成
     root = tk.Toplevel()
     root.title("複数行 入出金登録")
     root.geometry("850x600")
@@ -139,22 +159,20 @@ def show_register_multi_window():
     account_combo["values"] = list(accounts.keys())
     account_combo.pack(pady=5)
 
-    # 見出し
     header_frame = tk.Frame(root)
     header_frame.pack(fill="x", padx=20)
     for text, width in zip(["日付", "摘要", "預入", "引出"], [12, 20, 10, 10]):
         tk.Label(header_frame, text=text, width=width, anchor="w", font=font_label).pack(side="left", padx=5)
 
-    # 入力エリア
     entries_frame = tk.Frame(root)
     entries_frame.pack(fill="both", expand=True, padx=20, pady=10)
 
     add_row()
 
-    # 下部ボタン
     btn_frame = tk.Frame(root)
     btn_frame.pack(pady=10)
 
     tk.Button(btn_frame, text="＋ 行追加", command=add_row, font=font_button).pack(side="left", padx=10)
     tk.Button(btn_frame, text="登録", command=register_all, font=font_button).pack(side="left", padx=10)
     tk.Button(btn_frame, text="メニューに戻る", command=root.destroy, font=font_button).pack(side="left", padx=10)
+
