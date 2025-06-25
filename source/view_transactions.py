@@ -32,11 +32,7 @@ def search_transactions():
     # 初期残高の取得
     wb = openpyxl.load_workbook(EXCEL_FILE)
     ws_accounts = wb["口座一覧"]
-    initial_balance = 0
-    for row in ws_accounts.iter_rows(min_row=2, values_only=True):
-        if row[1] == account_name:
-            initial_balance = float(row[2])
-            break
+    initial_balance = get_initial_balance()
 
     # 履歴の読み込みとフィルタ
     ws_tx = wb["取引履歴"]
@@ -71,6 +67,19 @@ def search_transactions():
     current_balance = initial_balance + total_deposit - total_withdrawal
     balance_var.set(f"{current_balance:,.0f} 円")
 
+def get_initial_balance():
+    account_name = account_combo.get()
+    if not account_name:
+        return 0
+    wb = openpyxl.load_workbook(EXCEL_FILE)
+    ws = wb["口座一覧"]
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if row[1] == account_name:
+            wb.close()
+            return float(row[2])
+    wb.close()
+    return 0
+
 def export_to_excel():
     if not current_results:
         messagebox.showinfo("出力なし", "出力するデータがありません")
@@ -80,8 +89,24 @@ def export_to_excel():
     if not file_path:
         return
 
+    # データフレームとして出力行を準備
     df = pd.DataFrame(current_results, columns=["日付", "摘要", "預入", "引出"])
-    df.to_excel(file_path, index=False)
+
+    # 合計計算（float変換しつつ空白を除外）
+    deposit_total = sum(float(row[2]) for row in current_results if row[2] != "")
+    withdrawal_total = sum(float(row[3]) for row in current_results if row[3] != "")
+    current_balance = deposit_total - withdrawal_total + get_initial_balance()
+
+    # 正しい列構成の集計行を作成
+    df_summary = pd.DataFrame([
+        {"日付": "", "摘要": "", "預入": "", "引出": ""},
+        {"日付": "合計預入", "摘要": "", "預入": deposit_total, "引出": ""},
+        {"日付": "合計引出", "摘要": "", "預入": "", "引出": withdrawal_total},
+        {"日付": "残高", "摘要": "", "預入": current_balance, "引出": ""}
+    ])
+    
+    df_out = pd.concat([df, df_summary], ignore_index=True)
+    df_out.to_excel(file_path, index=False)
     messagebox.showinfo("出力完了", f"{file_path} に出力しました")
 
 # --- GUI構築 ---
