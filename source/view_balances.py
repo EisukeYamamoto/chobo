@@ -83,42 +83,55 @@ def show_balance_window():
         df_out.to_excel(file_path, index=False)
         messagebox.showinfo("出力完了", f"{file_path} に出力しました")
 
+    def colored_button(parent, text, command, bg, fg="white"):
+        return tk.Button(parent, text=text, command=command,
+                         bg=bg, fg=fg,
+                         activebackground=bg, activeforeground=fg,
+                         font=("Arial", 14), width=14)
+
     balance_win = tk.Toplevel()
     balance_win.title("残高一覧")
-    balance_win.geometry("700x500")
-    balance_win.minsize(500, 400)
+    balance_win.geometry("800x600")
+    balance_win.minsize(600, 450)
 
-    font_label = ("Arial", 12)
-    font_tree = ("Arial", 11)
-    font_button = ("Arial", 12)
+    font_label = ("Arial", 14)
+    font_tree = ("Arial", 13)
 
     current_data = []
     current_total = 0
     total_balance_text = tk.StringVar(value="全口座の残高合計：― 円")
 
-    balance_win.grid_rowconfigure(0, weight=1)
-    balance_win.grid_rowconfigure(1, weight=0)
-    balance_win.grid_rowconfigure(2, weight=0)
-    balance_win.grid_columnconfigure(0, weight=1)
+    # ===== 全体ラッパーフレーム =====
+    main_frame = tk.Frame(balance_win)
+    main_frame.pack(fill="both", expand=True)
 
-    tree = ttk.Treeview(balance_win, columns=("口座", "合計預入", "合計引出", "現在残高"), show="headings", height=20)
+    # ===== TreeView + Scrollbar部分 =====
+    tree_frame = tk.Frame(main_frame)
+    tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+    tree = ttk.Treeview(tree_frame, columns=("口座", "合計預入", "合計引出", "現在残高"), show="headings")
+    for col in ("口座", "合計預入", "合計引出", "現在残高"):
+        tree.heading(col, text=col)
+        tree.column(col, anchor="center", width=180)
+
+    scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+    tree.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
     style = ttk.Style()
     style.configure("Treeview.Heading", font=font_label)
     style.configure("Treeview", font=font_tree, rowheight=28)
 
-    for col in ("口座", "合計預入", "合計引出", "現在残高"):
-        tree.heading(col, text=col)
-        tree.column(col, width=150, anchor="center", stretch=True)
+    # ===== 残高合計表示 =====
+    tk.Label(main_frame, textvariable=total_balance_text, font=("Arial", 14, "bold")).pack(pady=5)
 
-    tree.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+    # ===== ボタン群 =====
+    btn_frame = tk.Frame(main_frame)
+    btn_frame.pack(pady=10)
 
-    tk.Label(balance_win, textvariable=total_balance_text, font=("Arial", 13, "bold")).grid(row=1, column=0, pady=5)
-
-    btn_frame = tk.Frame(balance_win)
-    btn_frame.grid(row=2, column=0, pady=10)
-
-    tk.Button(btn_frame, text="更新", command=show_balances, font=font_button).pack(side="left", padx=10)
-    tk.Button(btn_frame, text="Excelに出力", command=export_to_excel, font=font_button).pack(side="left", padx=10)
-    tk.Button(btn_frame, text="閉じる", command=balance_win.destroy, font=font_button).pack(side="left", padx=10)
+    colored_button(btn_frame, "更新", show_balances, bg="#2196F3").pack(side="left", padx=10)
+    colored_button(btn_frame, "Excelに出力", export_to_excel, bg="#4CAF50").pack(side="left", padx=10)
+    colored_button(btn_frame, "閉じる", balance_win.destroy, bg="#F44336").pack(side="left", padx=10)
 
     show_balances()
