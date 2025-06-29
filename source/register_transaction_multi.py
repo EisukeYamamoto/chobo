@@ -14,165 +14,120 @@ def show_register_multi_window():
     def load_accounts():
         wb = openpyxl.load_workbook(EXCEL_FILE)
         ws = wb["口座一覧"]
-        accounts = {row[1]: row[0] for row in ws.iter_rows(min_row=2, values_only=True)}
+        accounts = {}
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            accounts[row[1]] = row[0]
         wb.close()
         return accounts
 
-    def save_transactions(account_id, entries):
+    def save_transactions(rows, writer):
         wb = openpyxl.load_workbook(EXCEL_FILE)
         ws = wb["取引履歴"]
-        for entry in entries:
-            ws.append([entry['date'], account_id, entry['summary'], entry['deposit'], entry['withdrawal']])
+
+        if ws.max_column < 6 or ws.cell(row=1, column=6).value != "記入者":
+            ws.cell(row=1, column=6, value="記入者")
+
+        account_dict = load_accounts()
+        for row in rows:
+            date_str, account_name, summary, deposit, withdrawal = row
+            account_id = account_dict.get(account_name)
+            if account_id:
+                ws.append([date_str, account_id, summary, deposit, withdrawal, writer])
         wb.save(EXCEL_FILE)
         wb.close()
 
-    def get_current_balance(account_id):
-        wb = openpyxl.load_workbook(EXCEL_FILE)
-        ws1 = wb["口座一覧"]
-        ws2 = wb["取引履歴"]
-        initial = 0
-        for row in ws1.iter_rows(min_row=2, values_only=True):
-            if row[0] == account_id:
-                initial = float(row[2])
-                break
-        deposit_total = 0
-        withdrawal_total = 0
-        for row in ws2.iter_rows(min_row=2, values_only=True):
-            if row[1] == account_id:
-                deposit_total += float(row[3] or 0)
-                withdrawal_total += float(row[4] or 0)
-        wb.close()
-        return initial + deposit_total - withdrawal_total
-
-    def show_confirmation(entries):
-        popup = tk.Toplevel()
-        popup.title("登録内容の確認")
-        popup.geometry("600x300")
-
-        font_header = ("Arial", 11, "bold")
-        font_row = ("Arial", 11)
-
-        header_frame = tk.Frame(popup)
-        header_frame.pack(fill="x", padx=10, pady=5)
-
-        for text, width in zip(["日付", "摘要", "預入", "引出"], [15, 25, 10, 10]):
-            tk.Label(header_frame, text=text, width=width, font=font_header, anchor="w").pack(side="left")
-
-        for entry in entries:
-            row_frame = tk.Frame(popup)
-            row_frame.pack(fill="x", padx=10)
-            tk.Label(row_frame, text=entry["date"], width=15, font=font_row, anchor="w").pack(side="left")
-            tk.Label(row_frame, text=entry["summary"], width=25, font=font_row, anchor="w").pack(side="left")
-            tk.Label(row_frame, text=entry["deposit"] if entry["deposit"] != "" else "", width=10, font=font_row, anchor="e").pack(side="left")
-            tk.Label(row_frame, text=entry["withdrawal"] if entry["withdrawal"] != "" else "", width=10, font=font_row, anchor="e").pack(side="left")
-
-        tk.Button(popup, text="閉じる", font=("Arial", 11), command=popup.destroy).pack(pady=10)
-
     def register_all():
-        selected_account = account_combo.get()
-        if not selected_account:
-            messagebox.showwarning("口座未選択", "口座を選択してください")
-            return
+        rows = []
+        for i in range(len(entry_list)):
+            date = entry_list[i][0].get()
+            account = entry_list[i][1].get()
+            summary = entry_list[i][2].get().strip()
+            deposit = entry_list[i][3].get().strip()
+            withdrawal = entry_list[i][4].get().strip()
 
-        account_id = accounts[selected_account]
-        all_entries = []
+            if not (date and account and summary):
+                continue
 
-        for widgets in rows:
-            date_str = widgets[0].get().strip()
-            summary = widgets[1].get().strip()
-            deposit = widgets[2].get().strip()
-            withdrawal = widgets[3].get().strip()
+            # バリデーション：預入と引出の両方が空
+            if (not deposit and not withdrawal):
+                continue
 
-            if not (date_str and summary and (deposit or withdrawal)):
+            if (deposit and withdrawal):
+                messagebox.showwarning("入力エラー", f"{i+1}行目に預入と引出が両方入力されています")
+                continue
+
+            # 金額が正の整数かどうかチェック
+            try:
+                if deposit:
+                    dep = int(deposit)
+                    if dep <= 0:
+                        raise ValueError
+                else:
+                    dep = ""
+                if withdrawal:
+                    wd = int(withdrawal)
+                    if wd <= 0:
+                        raise ValueError
+                else:
+                    wd = ""
+            except ValueError:
+                messagebox.showwarning("金額エラー", f"{i+1}行目の金額が正の整数ではありません")
                 continue
 
             try:
-                input_date = datetime.strptime(date_str, "%Y-%m-%d")
-                if input_date > datetime.today():
-                    messagebox.showwarning("日付エラー", f"{date_str} は未来日付です")
-                    return
-            except ValueError:
-                messagebox.showwarning("日付エラー", f"{date_str} の形式が正しくありません")
-                return
+                datetime.strptime(date, "%Y-%m-%d")
+                dep = float(deposit) if deposit else ""
+                wd = float(withdrawal) if withdrawal else ""
+                rows.append([date, account, summary, dep, wd])
+            except:
+                continue
 
-            try:
-                deposit_val = float(deposit) if deposit else ""
-                withdrawal_val = float(withdrawal) if withdrawal else ""
-            except ValueError:
-                messagebox.showwarning("金額エラー", f"{summary} の金額が不正です")
-                return
-
-            all_entries.append({
-                'date': date_str,
-                'summary': summary,
-                'deposit': deposit_val,
-                'withdrawal': withdrawal_val
-            })
-
-        if not all_entries:
-            messagebox.showinfo("確認", "登録する有効な取引がありません")
+        writer = writer_entry.get().strip()
+        if not writer:
+            messagebox.showwarning("入力エラー", "記入者名を入力してください")
             return
 
-        try:
-            save_transactions(account_id, all_entries)
-            show_confirmation(all_entries)
-            balance = get_current_balance(account_id)
-            messagebox.showinfo("登録完了", f"{len(all_entries)} 件登録しました。\n現在の残高: {balance:,.0f} 円")
-            for widgets in rows:
-                for w in widgets:
-                    w.delete(0, tk.END)
-        except Exception as e:
-            messagebox.showerror("保存エラー", f"保存中にエラーが発生しました：\n{e}")
+        if not rows:
+            messagebox.showwarning("入力エラー", "有効な行がありません")
+            return
 
-    def add_row():
-        row_frame = tk.Frame(entries_frame)
-        row_frame.pack(fill="x", pady=2)
+        save_transactions(rows, writer)
+        messagebox.showinfo("登録完了", f"{len(rows)}件の取引を登録しました")
+        win.destroy()
 
-        date_entry = ttk.Entry(row_frame, font=font_entry, width=12)
-        date_entry.insert(0, datetime.today().strftime("%Y-%m-%d"))
-        date_entry.pack(side="left", padx=5)
+    def back_to_menu():
+        win.destroy()
 
-        summary_entry = ttk.Entry(row_frame, font=font_entry, width=20)
-        summary_entry.pack(side="left", padx=5)
+    win = tk.Toplevel()
+    win.title("入出金一括登録")
+    win.geometry("1200x800")
 
-        deposit_entry = ttk.Entry(row_frame, font=font_entry, width=10)
-        deposit_entry.pack(side="left", padx=5)
+    font = ("Arial", 14)
+    headers = ["日付", "口座", "摘要", "預入", "引出"]
+    for i, h in enumerate(headers):
+        tk.Label(win, text=h, font=font).grid(row=0, column=i, padx=2, pady=2)
 
-        withdrawal_entry = ttk.Entry(row_frame, font=font_entry, width=10)
-        withdrawal_entry.pack(side="left", padx=5)
+    entry_list = []
+    account_names = list(load_accounts().keys())
+    for row in range(20):
+        date_entry = DateEntry(win, date_pattern='yyyy-mm-dd', font=font)
+        date_entry.set_date(datetime.today())
+        date_entry.grid(row=row+1, column=0, padx=1, pady=1)
+        account_combo = ttk.Combobox(win, values=account_names, font=font, state="readonly")
+        account_combo.grid(row=row+1, column=1, padx=1, pady=1)
+        summary_entry = tk.Entry(win, font=font)
+        summary_entry.grid(row=row+1, column=2, padx=1, pady=1)
+        deposit_entry = tk.Entry(win, font=font)
+        deposit_entry.grid(row=row+1, column=3, padx=1, pady=1)
+        withdraw_entry = tk.Entry(win, font=font)
+        withdraw_entry.grid(row=row+1, column=4, padx=1, pady=1)
+        entry_list.append([date_entry, account_combo, summary_entry, deposit_entry, withdraw_entry])
 
-        rows.append((date_entry, summary_entry, deposit_entry, withdrawal_entry))
+    # 記入者名
+    tk.Label(win, text="記入者", font=font).grid(row=21, column=0, padx=5, pady=10, sticky="e")
+    writer_entry = tk.Entry(win, font=font)
+    writer_entry.grid(row=21, column=1, padx=5, pady=10, sticky="w")
 
-    root = tk.Toplevel()
-    root.title("複数行 入出金登録")
-    root.geometry("850x600")
-
-    font_label = ("Arial", 12)
-    font_entry = ("Arial", 12)
-    font_button = ("Arial", 12)
-
-    accounts = load_accounts()
-    rows = []
-
-    tk.Label(root, text="口座名", font=font_label).pack(pady=(10, 0))
-    account_combo = ttk.Combobox(root, font=font_entry, state="readonly")
-    account_combo["values"] = list(accounts.keys())
-    account_combo.pack(pady=5)
-
-    header_frame = tk.Frame(root)
-    header_frame.pack(fill="x", padx=20)
-    for text, width in zip(["日付", "摘要", "預入", "引出"], [12, 20, 10, 10]):
-        tk.Label(header_frame, text=text, width=width, anchor="w", font=font_label).pack(side="left", padx=5)
-
-    entries_frame = tk.Frame(root)
-    entries_frame.pack(fill="both", expand=True, padx=20, pady=10)
-
-    add_row()
-
-    btn_frame = tk.Frame(root)
-    btn_frame.pack(pady=10)
-
-    tk.Button(btn_frame, text="＋ 行追加", command=add_row, font=font_button).pack(side="left", padx=10)
-    tk.Button(btn_frame, text="登録", command=register_all, font=font_button).pack(side="left", padx=10)
-    tk.Button(btn_frame, text="メニューに戻る", command=root.destroy, font=font_button).pack(side="left", padx=10)
-
+    # 登録・戻るボタン
+    tk.Button(win, text="登録", font=font, command=register_all).grid(row=22, column=0, columnspan=2, pady=10)
+    tk.Button(win, text="メニューに戻る", font=font, command=back_to_menu).grid(row=22, column=2, columnspan=2, pady=10)

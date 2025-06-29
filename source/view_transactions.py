@@ -46,7 +46,8 @@ def show_transaction_window():
 
         raw_records = []
         for row in ws.iter_rows(min_row=2, values_only=True):
-            date_str, acc_id, summary, deposit, withdrawal = row
+            row = list(row) + [None] * (6 - len(row))
+            date_str, acc_id, summary, deposit, withdrawal, writer = row
             if acc_id != account_id:
                 continue
             try:
@@ -58,7 +59,8 @@ def show_transaction_window():
                     "date": tx_date,
                     "summary": summary,
                     "deposit": float(deposit or 0),
-                    "withdrawal": float(withdrawal or 0)
+                    "withdrawal": float(withdrawal or 0),
+                    "writer": writer or ""
                 })
         wb.close()
 
@@ -75,7 +77,8 @@ def show_transaction_window():
                 r["summary"],
                 r["deposit"] if r["deposit"] else "",
                 r["withdrawal"] if r["withdrawal"] else "",
-                current_balance
+                current_balance,
+                r["writer"]
             ])
             total_deposit += r["deposit"]
             total_withdrawal += r["withdrawal"]
@@ -85,9 +88,12 @@ def show_transaction_window():
         for r in records:
             tree.insert("", tk.END, values=r)
 
-        nonlocal current_results, final_balance
+        nonlocal current_results, final_balance, export_account, export_start, export_end
         current_results = records
         final_balance = current_balance
+        export_account = account_name
+        export_start = start_entry.get()
+        export_end = end_entry.get()
 
         deposit_text.set(f"合計預入：{total_deposit:,.0f} 円")
         withdrawal_text.set(f"合計引出：{total_withdrawal:,.0f} 円")
@@ -102,32 +108,44 @@ def show_transaction_window():
         if not file_path:
             return
 
-        df = pd.DataFrame(current_results, columns=["日付", "摘要", "預入", "引出", "残高"])
+        df = pd.DataFrame(current_results, columns=["日付", "摘要", "預入", "引出", "残高", "記入者"])
         deposit_total = sum(float(r[2]) for r in current_results if r[2] != "")
         withdrawal_total = sum(float(r[3]) for r in current_results if r[3] != "")
 
         df_summary = pd.DataFrame([
-            {"日付": "", "摘要": "", "預入": "", "引出": "", "残高": ""},
-            {"日付": "合計預入", "摘要": "", "預入": deposit_total, "引出": "", "残高": ""},
-            {"日付": "合計引出", "摘要": "", "預入": "", "引出": withdrawal_total, "残高": ""},
-            {"日付": "残高", "摘要": "", "預入": final_balance, "引出": "", "残高": ""}
+            {"日付": "", "摘要": "", "預入": "", "引出": "", "残高": "", "記入者": ""},
+            {"日付": "合計預入", "摘要": "", "預入": deposit_total, "引出": "", "残高": "", "記入者": ""},
+            {"日付": "合計引出", "摘要": "", "預入": "", "引出": withdrawal_total, "残高": "", "記入者": ""},
+            {"日付": "残高", "摘要": "", "預入": final_balance, "引出": "", "残高": "", "記入者": ""}
         ])
+
         df_out = pd.concat([df, df_summary], ignore_index=True)
-        df_out.to_excel(file_path, index=False)
+
+        with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+            workbook = writer.book
+            sheet_name = "取引履歴"
+            df_out.to_excel(writer, sheet_name=sheet_name, startrow=2, index=False)
+            worksheet = writer.sheets[sheet_name]
+            header_text = f"{export_account}（{export_start} ～ {export_end}）"
+            worksheet.cell(row=1, column=1, value=header_text)
+
         messagebox.showinfo("出力完了", f"{file_path} に出力しました")
 
     accounts = load_accounts()
     current_results = []
     final_balance = 0.0
+    export_account = ""
+    export_start = ""
+    export_end = ""
 
     deposit_text = tk.StringVar(value="合計預入：―")
     withdrawal_text = tk.StringVar(value="合計引出：―")
     balance_text = tk.StringVar(value="残高：―")
 
     root = tk.Toplevel()
-    root.title("取引履歴の参照と出力（残高付き）")
-    root.geometry("800x600")
-    root.minsize(600, 400)
+    root.title("取引履歴の参照と出力")
+    root.geometry("900x600")
+    root.minsize(700, 400)
 
     for i in range(10):
         root.grid_rowconfigure(i, weight=0)
@@ -154,12 +172,12 @@ def show_transaction_window():
 
     tk.Button(root, text="検索", command=search_transactions, font=font_button).grid(row=3, column=0, columnspan=2, pady=10)
 
-    tree = ttk.Treeview(root, columns=("日付", "摘要", "預入", "引出", "残高"), show="headings", height=15)
+    tree = ttk.Treeview(root, columns=("日付", "摘要", "預入", "引出", "残高", "記入者"), show="headings", height=15)
     style = ttk.Style()
     style.configure("Treeview.Heading", font=font_label)
     style.configure("Treeview", font=font_tree, rowheight=28)
 
-    for col in ("日付", "摘要", "預入", "引出", "残高"):
+    for col in ("日付", "摘要", "預入", "引出", "残高", "記入者"):
         tree.heading(col, text=col)
         tree.column(col, width=120, anchor="center", stretch=True)
     tree.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
