@@ -17,8 +17,8 @@ def show_register_multi_window():
         ws = wb["口座一覧"]
         accounts = {}
         for row in ws.iter_rows(min_row=2, values_only=True):
-            label = f"{row[1]}（{row[3]}）"  # 口座名（種別）
-            accounts[label] = row[0]        # 表示名 : ID
+            label = f"{row[1]}（{row[3]}）"
+            accounts[label] = row[0]
         wb.close()
         return accounts
 
@@ -98,15 +98,21 @@ def show_register_multi_window():
     def back_to_menu():
         win.destroy()
 
+    # ウィンドウ設定
     win = tk.Toplevel()
     win.title("入出金一括登録")
     win.geometry("1200x800")
+    win.configure(bg="#f0f0f5")
 
     font = ("Arial", 14)
+
+    # 見出し行
     headers = ["日付", "口座", "摘要", "預入", "引出"]
     for i, h in enumerate(headers):
-        tk.Label(win, text=h, font=font).grid(row=0, column=i, padx=2, pady=2)
+        label = tk.Label(win, text=h, font=font, bg="#dfe3ee", padx=5, pady=5)
+        label.grid(row=0, column=i, padx=2, pady=2)
 
+    # 入力行
     entry_list = []
     account_dict = load_accounts()
     account_labels = list(account_dict.keys())
@@ -114,22 +120,32 @@ def show_register_multi_window():
         date_entry = DateEntry(win, date_pattern='yyyy-mm-dd', font=font)
         date_entry.set_date(datetime.today())
         date_entry.grid(row=row+1, column=0, padx=1, pady=1)
+
         account_combo = ttk.Combobox(win, values=account_labels, font=font, state="readonly")
         account_combo.grid(row=row+1, column=1, padx=1, pady=1)
+
         summary_entry = tk.Entry(win, font=font)
         summary_entry.grid(row=row+1, column=2, padx=1, pady=1)
+
         deposit_entry = tk.Entry(win, font=font)
         deposit_entry.grid(row=row+1, column=3, padx=1, pady=1)
+
         withdraw_entry = tk.Entry(win, font=font)
         withdraw_entry.grid(row=row+1, column=4, padx=1, pady=1)
+
         entry_list.append([date_entry, account_combo, summary_entry, deposit_entry, withdraw_entry])
 
-    tk.Label(win, text="記入者", font=font).grid(row=21, column=0, padx=5, pady=10, sticky="e")
+    # 記入者
+    tk.Label(win, text="記入者", font=font, bg="#f0f0f5").grid(row=21, column=0, padx=5, pady=15, sticky="e")
     writer_entry = tk.Entry(win, font=font)
-    writer_entry.grid(row=21, column=1, padx=5, pady=10, sticky="w")
+    writer_entry.grid(row=21, column=1, padx=5, pady=15, sticky="w")
 
-    button_frame = tk.Frame(win)
-    button_frame.grid(row=22, column=0, columnspan=5, pady=20)
+    # ボタンフレーム（中央揃え）
+    button_frame = tk.Frame(win, bg="#f0f0f5")
+    button_frame.grid(row=22, column=0, columnspan=5, pady=30)
 
-    tk.Button(button_frame, text="登録", font=font, command=register_all, width=15).pack(side="left", padx=20)
-    tk.Button(button_frame, text="メニューに戻る", font=font, command=back_to_menu, width=15).pack(side="left", padx=20)
+    tk.Button(button_frame, text="登録", font=font, command=register_all,
+              bg="#4caf50", fg="white", width=15).pack(side="left", padx=30)
+
+    tk.Button(button_frame, text="メニューに戻る", font=font, command=back_to_menu,
+              bg="#f44336", fg="white", width=15).pack(side="left", padx=30)
