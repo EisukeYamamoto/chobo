@@ -13,7 +13,7 @@ def show_transaction_window():
         ws = wb["口座一覧"]
         accounts = {}
         for row in ws.iter_rows(min_row=2, values_only=True):
-            display_name = f"{row[1]}（{row[3]}）"  # 銀行名（種別）
+            display_name = f"{row[1]}（{row[3]}）"
             accounts[display_name] = row[0]
         wb.close()
         return accounts
@@ -148,47 +148,55 @@ def show_transaction_window():
 
     root = tk.Toplevel()
     root.title("取引履歴の参照と出力")
-    root.geometry("900x600")
-    root.minsize(700, 400)
+    root.geometry("900x700")
+    root.configure(bg="#f2f2f7")
 
-    for i in range(10):
-        root.grid_rowconfigure(i, weight=0)
+    font_label = ("Arial", 13)
+    font_entry = ("Arial", 13)
+    font_button = ("Arial", 13)
+    font_tree = ("Arial", 12)
+
+    # 入力部分
+    tk.Label(root, text="口座", font=font_label, bg="#f2f2f7").grid(row=0, column=0, sticky="e", padx=10, pady=5)
+    account_combo = ttk.Combobox(root, values=list(accounts.keys()), state="readonly", font=font_entry)
+    account_combo.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+
+    tk.Label(root, text="開始日", font=font_label, bg="#f2f2f7").grid(row=1, column=0, sticky="e", padx=10, pady=5)
+    start_entry = DateEntry(root, date_pattern='yyyy-mm-dd', font=font_entry)
+    start_entry.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
+
+    tk.Label(root, text="終了日", font=font_label, bg="#f2f2f7").grid(row=2, column=0, sticky="e", padx=10, pady=5)
+    end_entry = DateEntry(root, date_pattern='yyyy-mm-dd', font=font_entry)
+    end_entry.grid(row=2, column=1, padx=10, pady=5, sticky="ew")
+
+    tk.Button(root, text="検索", command=search_transactions, font=font_button, bg="#4CAF50", fg="white", width=20).grid(row=3, column=0, columnspan=2, pady=10)
+
+    # Treeview + スクロールバー
+    tree_frame = tk.Frame(root)
+    tree_frame.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
     root.grid_rowconfigure(4, weight=1)
-    root.grid_columnconfigure(0, weight=0)
     root.grid_columnconfigure(1, weight=1)
 
-    font_label = ("Arial", 12)
-    font_entry = ("Arial", 12)
-    font_button = ("Arial", 12)
-    font_tree = ("Arial", 11)
-
-    tk.Label(root, text="口座", font=font_label).grid(row=0, column=0, sticky="e", padx=5, pady=5)
-    account_combo = ttk.Combobox(root, values=list(accounts.keys()), state="readonly", font=font_entry)
-    account_combo.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
-
-    tk.Label(root, text="開始日", font=font_label).grid(row=1, column=0, sticky="e", padx=5, pady=5)
-    start_entry = DateEntry(root, date_pattern='yyyy-mm-dd', font=font_entry)
-    start_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
-
-    tk.Label(root, text="終了日", font=font_label).grid(row=2, column=0, sticky="e", padx=5, pady=5)
-    end_entry = DateEntry(root, date_pattern='yyyy-mm-dd', font=font_entry)
-    end_entry.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
-
-    tk.Button(root, text="検索", command=search_transactions, font=font_button).grid(row=3, column=0, columnspan=2, pady=10)
-
-    tree = ttk.Treeview(root, columns=("日付", "摘要", "預入", "引出", "残高", "記入者"), show="headings", height=15)
+    tree = ttk.Treeview(tree_frame, columns=("日付", "摘要", "預入", "引出", "残高", "記入者"), show="headings", height=15)
     style = ttk.Style()
     style.configure("Treeview.Heading", font=font_label)
     style.configure("Treeview", font=font_tree, rowheight=28)
 
     for col in ("日付", "摘要", "預入", "引出", "残高", "記入者"):
         tree.heading(col, text=col)
-        tree.column(col, width=120, anchor="center", stretch=True)
-    tree.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
+        tree.column(col, width=120, anchor="center")
 
-    tk.Label(root, textvariable=deposit_text, font=font_label).grid(row=5, column=0, columnspan=2, sticky="n", pady=2)
-    tk.Label(root, textvariable=withdrawal_text, font=font_label).grid(row=6, column=0, columnspan=2, sticky="n", pady=2)
-    tk.Label(root, textvariable=balance_text, font=("Arial", 14, "bold")).grid(row=7, column=0, columnspan=2, sticky="n", pady=5)
+    tree.pack(side="left", fill="both", expand=True)
 
-    tk.Button(root, text="Excelに出力", command=export_to_excel, font=font_button).grid(row=8, column=0, columnspan=2, pady=10)
-    tk.Button(root, text="閉じる", command=root.destroy, font=font_button).grid(row=9, column=0, columnspan=2, pady=10)
+    scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+    scrollbar.pack(side="right", fill="y")
+    tree.configure(yscrollcommand=scrollbar.set)
+
+    # 集計表示
+    tk.Label(root, textvariable=deposit_text, font=font_label, bg="#f2f2f7").grid(row=5, column=0, columnspan=2, sticky="n", pady=2)
+    tk.Label(root, textvariable=withdrawal_text, font=font_label, bg="#f2f2f7").grid(row=6, column=0, columnspan=2, sticky="n", pady=2)
+    tk.Label(root, textvariable=balance_text, font=("Arial", 14, "bold"), bg="#f2f2f7").grid(row=7, column=0, columnspan=2, sticky="n", pady=5)
+
+    # ボタン群
+    tk.Button(root, text="Excelに出力", command=export_to_excel, font=font_button, bg="#4CAF50", fg="white", width=20).grid(row=8, column=0, columnspan=2, pady=10)
+    tk.Button(root, text="メニューに戻る", command=root.destroy, font=font_button, bg="#f44336", fg="white", width=20).grid(row=9, column=0, columnspan=2, pady=10)
