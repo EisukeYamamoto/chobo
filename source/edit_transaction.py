@@ -121,9 +121,14 @@ def show_edit_transaction_window():
         except Exception as e:
             messagebox.showerror("削除エラー", f"削除中にエラーが発生しました\n{e}")
 
+    def colored_button(parent, text, command, bg, fg="white"):
+        return tk.Button(parent, text=text, command=command, bg=bg, fg=fg,
+                         activebackground=bg, activeforeground=fg,
+                         font=("Arial", 14), width=12)
+
     win = tk.Toplevel()
     win.title("取引履歴の修正・削除")
-    win.geometry("1000x650")
+    win.geometry("1000x700")
 
     font_main = ("Arial", 14)
     font_tree = ("Arial", 13)
@@ -135,11 +140,21 @@ def show_edit_transaction_window():
     style.configure("Treeview.Heading", font=font_main)
     style.configure("Treeview", font=font_tree, rowheight=30)
 
-    tree = ttk.Treeview(win, columns=("日付", "口座", "摘要", "預入", "引出", "記入者"), show="headings", height=10)
+    # Treeview + Scrollbar
+    tree_frame = tk.Frame(win)
+    tree_frame.pack(pady=10, fill="both", expand=True)
+
+    tree_scroll = tk.Scrollbar(tree_frame)
+    tree_scroll.pack(side="right", fill="y")
+
+    tree = ttk.Treeview(tree_frame, columns=("日付", "口座", "摘要", "預入", "引出", "記入者"),
+                        show="headings", yscrollcommand=tree_scroll.set, height=10)
+    tree_scroll.config(command=tree.yview)
+
     for col in tree["columns"]:
         tree.heading(col, text=col)
-        tree.column(col, width=160)
-    tree.pack(pady=10, fill="x")
+        tree.column(col, width=160, anchor="center")
+    tree.pack(fill="both", expand=True)
     tree.bind("<<TreeviewSelect>>", on_select)
 
     for idx, rec in enumerate(records):
@@ -153,6 +168,7 @@ def show_edit_transaction_window():
         ]
         tree.insert("", "end", values=rec_display, tags=(str(idx),))
 
+    # Entry fields
     form_frame = tk.Frame(win)
     form_frame.pack(pady=10)
 
@@ -168,9 +184,10 @@ def show_edit_transaction_window():
     withdrawal_entry = labeled_entry(3, "引出")
     writer_entry = labeled_entry(4, "記入者")
 
+    # Buttons
     btn_frame = tk.Frame(win)
-    btn_frame.pack(pady=15)
+    btn_frame.pack(pady=20)
 
-    tk.Button(btn_frame, text="修正する", command=update_transaction, font=font_main, width=12).pack(side="left", padx=10)
-    tk.Button(btn_frame, text="削除する", command=delete_transaction, font=font_main, width=12).pack(side="left", padx=10)
-    tk.Button(btn_frame, text="閉じる", command=win.destroy, font=font_main, width=12).pack(side="left", padx=10)
+    colored_button(btn_frame, "修正する", update_transaction, bg="#4CAF50").pack(side="left", padx=10)
+    colored_button(btn_frame, "削除する", delete_transaction, bg="#FF7043").pack(side="left", padx=10)
+    colored_button(btn_frame, "閉じる", win.destroy, bg="#F44336").pack(side="left", padx=10)
