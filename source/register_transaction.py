@@ -19,7 +19,7 @@ def show_register_window():
         for row in ws.iter_rows(min_row=2, values_only=True):
             name, acc_type = row[1], row[3] if len(row) > 3 else ""
             key = f"{name}（{acc_type}）" if acc_type else name
-            accounts[key] = row[0]  # 表示名:口座ID
+            accounts[key] = row[0]
         wb.close()
         return accounts
 
@@ -43,12 +43,8 @@ def show_register_window():
             if row[0] == account_id:
                 initial = float(row[2])
                 break
-        total_deposit = 0
-        total_withdrawal = 0
-        for row in ws2.iter_rows(min_row=2, values_only=True):
-            if row[1] == account_id:
-                total_deposit += float(row[3] or 0)
-                total_withdrawal += float(row[4] or 0)
+        total_deposit = sum(float(r[3] or 0) for r in ws2.iter_rows(min_row=2, values_only=True) if r[1] == account_id)
+        total_withdrawal = sum(float(r[4] or 0) for r in ws2.iter_rows(min_row=2, values_only=True) if r[1] == account_id)
         wb.close()
         return initial + total_deposit - total_withdrawal
 
@@ -100,53 +96,52 @@ def show_register_window():
 
     win = tk.Toplevel()
     win.title("入出金登録")
-    win.geometry("500x500")
-    win.minsize(400, 300)
+    win.geometry("500x520")
+    win.configure(bg="#f0f0f5")
 
-    for i in range(8):
-        win.grid_rowconfigure(i, weight=0)
-    win.grid_rowconfigure(7, weight=1)
-    win.grid_columnconfigure(0, weight=0)
-    win.grid_columnconfigure(1, weight=1)
+    font_label = ("Arial", 14)
+    font_entry = ("Arial", 14)
+    font_button = ("Arial", 14)
 
-    font_label = ("Arial", 12)
-    font_entry = ("Arial", 12)
-    font_button = ("Arial", 12)
+    # 項目ラベルと入力欄
+    def add_row(label_text, row_num, widget):
+        tk.Label(win, text=label_text, font=font_label, bg="#f0f0f5").grid(row=row_num, column=0, padx=10, pady=8, sticky="e")
+        widget.grid(row=row_num, column=1, padx=10, pady=8, sticky="ew")
 
-    tk.Label(win, text="日付", font=font_label).grid(row=0, column=0, padx=5, pady=5, sticky="e")
     date_entry = DateEntry(win, date_pattern='yyyy-mm-dd', font=font_entry)
     date_entry.set_date(datetime.today())
-    date_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+    add_row("日付", 0, date_entry)
 
-    tk.Label(win, text="口座", font=font_label).grid(row=1, column=0, padx=5, pady=5, sticky="e")
     account_combo = ttk.Combobox(win, state="readonly", font=font_entry)
-    account_combo.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
     try:
         account_combo["values"] = list(load_accounts().keys())
     except Exception as e:
         messagebox.showerror("口座読み込みエラー", f"口座一覧の読み込みに失敗しました\n{e}")
         win.destroy()
         return
+    add_row("口座", 1, account_combo)
 
-    tk.Label(win, text="摘要", font=font_label).grid(row=2, column=0, padx=5, pady=5, sticky="e")
     summary_entry = tk.Entry(win, font=font_entry)
-    summary_entry.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
+    add_row("摘要", 2, summary_entry)
 
-    tk.Label(win, text="金額", font=font_label).grid(row=3, column=0, padx=5, pady=5, sticky="e")
     amount_entry = tk.Entry(win, font=font_entry)
-    amount_entry.grid(row=3, column=1, padx=5, pady=5, sticky="ew")
+    add_row("金額", 3, amount_entry)
 
-    tk.Label(win, text="記入者", font=font_label).grid(row=4, column=0, padx=5, pady=5, sticky="e")
     writer_entry = tk.Entry(win, font=font_entry)
-    writer_entry.grid(row=4, column=1, padx=5, pady=5, sticky="ew")
+    add_row("記入者", 4, writer_entry)
 
+    # 預入・引出ラジオボタン
     mode_var = tk.StringVar(value="預入")
-    mode_frame = tk.Frame(win)
+    mode_frame = tk.Frame(win, bg="#f0f0f5")
     mode_frame.grid(row=5, column=0, columnspan=2, pady=10)
-    tk.Radiobutton(mode_frame, text="預入", variable=mode_var, value="預入", font=font_entry).pack(side="left", padx=10)
-    tk.Radiobutton(mode_frame, text="引出", variable=mode_var, value="引出", font=font_entry).pack(side="left", padx=10)
+    tk.Radiobutton(mode_frame, text="預入", variable=mode_var, value="預入", font=font_entry, bg="#f0f0f5").pack(side="left", padx=20)
+    tk.Radiobutton(mode_frame, text="引出", variable=mode_var, value="引出", font=font_entry, bg="#f0f0f5").pack(side="left", padx=20)
 
-    tk.Button(win, text="登録", command=register_transaction, font=font_button).grid(row=6, column=0, columnspan=2, pady=10)
-    tk.Button(win, text="メニューに戻る", command=back_to_menu, font=font_button).grid(row=7, column=0, columnspan=2, pady=10)
+    # ボタン配置（中央寄せ）
+    button_frame = tk.Frame(win, bg="#f0f0f5")
+    button_frame.grid(row=6, column=0, columnspan=2, pady=20)
+    tk.Button(button_frame, text="登録", command=register_transaction, font=font_button, bg="#4caf50", fg="white", width=12).pack(side="left", padx=20)
+    tk.Button(button_frame, text="メニューに戻る", command=back_to_menu, font=font_button, bg="#f44336", fg="white", width=12).pack(side="left", padx=20)
 
+    win.grid_columnconfigure(1, weight=1)
     summary_entry.focus()
