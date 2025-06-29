@@ -141,7 +141,7 @@ def show_register_window():
     button_frame = tk.Frame(win, bg="#f0f0f5")
     button_frame.grid(row=6, column=0, columnspan=2, pady=20)
     tk.Button(button_frame, text="登録", command=register_transaction, font=font_button, bg="#4caf50", fg="white", width=12).pack(side="left", padx=20)
-    tk.Button(button_frame, text="メニューに戻る", command=back_to_menu, font=font_button, bg="#f44336", fg="white", width=12).pack(side="left", padx=20)
+    tk.Button(button_frame, text="閉じる", command=back_to_menu, font=font_button, bg="#f44336", fg="white", width=12).pack(side="left", padx=20)
 
     win.grid_columnconfigure(1, weight=1)
     summary_entry.focus()

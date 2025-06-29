@@ -199,4 +199,4 @@ def show_transaction_window():
 
     # ボタン群
     tk.Button(root, text="Excelに出力", command=export_to_excel, font=font_button, bg="#4CAF50", fg="white", width=20).grid(row=8, column=0, columnspan=2, pady=10)
-    tk.Button(root, text="メニューに戻る", command=root.destroy, font=font_button, bg="#f44336", fg="white", width=20).grid(row=9, column=0, columnspan=2, pady=10)
+    tk.Button(root, text="閉じる", command=root.destroy, font=font_button, bg="#f44336", fg="white", width=20).grid(row=9, column=0, columnspan=2, pady=10)

@@ -147,5 +147,5 @@ def show_register_multi_window():
     tk.Button(button_frame, text="登録", font=font, command=register_all,
               bg="#4caf50", fg="white", width=15).pack(side="left", padx=30)
 
-    tk.Button(button_frame, text="メニューに戻る", font=font, command=back_to_menu,
+    tk.Button(button_frame, text="閉じる", font=font, command=back_to_menu,
               bg="#f44336", fg="white", width=15).pack(side="left", padx=30)
