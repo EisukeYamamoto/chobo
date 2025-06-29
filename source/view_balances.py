@@ -69,6 +69,7 @@ def show_balance_window():
         file_path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excelファイル", "*.xlsx")])
         if not file_path:
             return
+
         df = pd.DataFrame(
             [row[:4] for row in current_data],
             columns=["口座", "合計預入", "合計引出", "現在残高"]
@@ -80,7 +81,39 @@ def show_balance_window():
             "現在残高": current_total
         }])
         df_out = pd.concat([df, df_summary], ignore_index=True)
-        df_out.to_excel(file_path, index=False)
+
+        with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+            df_out.to_excel(writer, sheet_name="残高一覧", startrow=2, index=False)
+            wb = writer.book
+            ws = writer.sheets["残高一覧"]
+
+            # ヘッダー書き込み
+            ws.cell(row=1, column=1, value="全口座の残高一覧")
+
+            # 列幅自動調整 & wrap text 設定（口座列のみ折り返し）
+            from openpyxl.utils import get_column_letter
+            for i, col in enumerate(df_out.columns, start=1):
+                max_length = max(df_out[col].astype(str).map(len).max(), len(col)) + 2
+                col_letter = get_column_letter(i)
+
+                if col == "口座":
+                    ws.column_dimensions[col_letter].width = max(15, min(max_length, 60))
+                    for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=i, max_col=i):
+                        for cell in row:
+                            cell.alignment = openpyxl.styles.Alignment(wrap_text=True)
+                else:
+                    ws.column_dimensions[col_letter].width = max(10, min(max_length, 40))
+                    for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=i, max_col=i):
+                        for cell in row:
+                            if isinstance(cell.value, (int, float)):
+                                cell.number_format = '#,##0'
+
+            # ページ設定：A4縦、幅内に収める
+            ws.page_setup.paperSize = ws.PAPERSIZE_A4
+            ws.page_setup.orientation = ws.ORIENTATION_PORTRAIT
+            ws.page_setup.fitToWidth = 1
+            ws.page_setup.fitToHeight = 0
+
         messagebox.showinfo("出力完了", f"{file_path} に出力しました")
 
     def colored_button(parent, text, command, bg, fg="white"):

@@ -126,12 +126,35 @@ def show_transaction_window():
         df_out = pd.concat([df, df_summary], ignore_index=True)
 
         with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
-            workbook = writer.book
-            sheet_name = "取引履歴"
-            df_out.to_excel(writer, sheet_name=sheet_name, startrow=2, index=False)
-            worksheet = writer.sheets[sheet_name]
-            header_text = f"{export_account}（{export_start} ～ {export_end}）"
-            worksheet.cell(row=1, column=1, value=header_text)
+            df_out.to_excel(writer, sheet_name="取引履歴", startrow=2, index=False)
+            wb = writer.book
+            ws = writer.sheets["取引履歴"]
+
+            # ヘッダー書き込み
+            ws.cell(row=1, column=1, value=f"{export_account}（{export_start} ～ {export_end}）")
+
+            # 列幅自動調整 & wrap text 設定
+            from openpyxl.utils import get_column_letter
+            for i, col in enumerate(df_out.columns, start=1):
+                max_length = max(df_out[col].astype(str).map(len).max(), len(col)) + 2
+                col_letter = get_column_letter(i)
+                ws.column_dimensions[col_letter].width = max(10, min(max_length, 40))
+                if col == "摘要":
+                    for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=i, max_col=i):
+                        for cell in row:
+                            cell.alignment = openpyxl.styles.Alignment(wrap_text=True)
+                else:
+                    ws.column_dimensions[col_letter].width = max(10, min(max_length, 30))
+                    for row in ws.iter_rows(min_row=3, max_row=ws.max_row, min_col=i, max_col=i):
+                        for cell in row:
+                            if isinstance(cell.value, (int, float)):
+                                cell.number_format = '#,##0'
+
+            # ページ設定：A4縦、すべてを1ページに収める
+            ws.page_setup.paperSize = ws.PAPERSIZE_A4
+            ws.page_setup.orientation = ws.ORIENTATION_PORTRAIT
+            ws.page_setup.fitToWidth = 1
+            ws.page_setup.fitToHeight = 0
 
         messagebox.showinfo("出力完了", f"{file_path} に出力しました")
 
