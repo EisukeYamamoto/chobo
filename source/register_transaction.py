@@ -17,13 +17,15 @@ def show_register_window():
         ws = wb["口座一覧"]
         accounts = {}
         for row in ws.iter_rows(min_row=2, values_only=True):
-            accounts[row[1]] = row[0]  # 口座名:口座ID
+            name, acc_type = row[1], row[3] if len(row) > 3 else ""
+            key = f"{name}（{acc_type}）" if acc_type else name
+            accounts[key] = row[0]  # 表示名:口座ID
         wb.close()
         return accounts
 
-    def save_transaction(date_str, account_name, summary, deposit, withdrawal, writer):
+    def save_transaction(date_str, account_display, summary, deposit, withdrawal, writer):
         wb = openpyxl.load_workbook(EXCEL_FILE)
-        account_id = load_accounts()[account_name]
+        account_id = load_accounts()[account_display]
         ws = wb["取引履歴"]
         if ws.max_column < 6 or ws.cell(row=1, column=6).value != "記入者":
             ws.cell(row=1, column=6, value="記入者")
@@ -31,8 +33,8 @@ def show_register_window():
         wb.save(EXCEL_FILE)
         wb.close()
 
-    def get_current_balance(account_name):
-        account_id = load_accounts()[account_name]
+    def get_current_balance(account_display):
+        account_id = load_accounts()[account_display]
         wb = openpyxl.load_workbook(EXCEL_FILE)
         ws1 = wb["口座一覧"]
         ws2 = wb["取引履歴"]
@@ -52,13 +54,13 @@ def show_register_window():
 
     def register_transaction():
         date_str = date_entry.get()
-        account_name = account_combo.get()
+        account_display = account_combo.get()
         summary = summary_entry.get().strip()
         amount = amount_entry.get().strip()
         writer = writer_entry.get().strip()
         mode = mode_var.get()
 
-        if not (date_str and account_name and summary and amount and writer):
+        if not (date_str and account_display and summary and amount and writer):
             messagebox.showwarning("入力エラー", "すべての項目を入力してください")
             return
 
@@ -73,16 +75,18 @@ def show_register_window():
 
         try:
             float_amount = float(amount)
+            if float_amount <= 0 or not float_amount.is_integer():
+                raise ValueError
         except ValueError:
-            messagebox.showwarning("金額エラー", "金額は数値で入力してください")
+            messagebox.showwarning("金額エラー", "金額は正の整数で入力してください")
             return
 
         deposit = float_amount if mode == "預入" else ""
         withdrawal = float_amount if mode == "引出" else ""
 
         try:
-            save_transaction(date_str, account_name, summary, deposit, withdrawal, writer)
-            current_balance = get_current_balance(account_name)
+            save_transaction(date_str, account_display, summary, deposit, withdrawal, writer)
+            current_balance = get_current_balance(account_display)
             messagebox.showinfo("登録完了", f"取引が登録されました\n現在の残高: {current_balance:,.0f} 円")
             summary_entry.delete(0, tk.END)
             amount_entry.delete(0, tk.END)

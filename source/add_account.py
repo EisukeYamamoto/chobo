@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 import openpyxl
 import os
 
@@ -23,9 +23,10 @@ def show_add_account_window():
         acc_id = id_entry.get().strip()
         acc_name = name_entry.get().strip()
         init_balance = balance_entry.get().strip()
+        account_type = type_var.get()
 
-        if not acc_name or not init_balance:
-            messagebox.showwarning("入力エラー", "口座名と初期残高を入力してください")
+        if not acc_name or not init_balance or not account_type:
+            messagebox.showwarning("入力エラー", "すべての項目を入力してください")
             return
 
         try:
@@ -38,15 +39,14 @@ def show_add_account_window():
             wb = openpyxl.load_workbook(EXCEL_FILE)
             ws = wb["口座一覧"]
 
-            # 重複チェック（口座名のみ）
             for row in ws.iter_rows(min_row=2, values_only=True):
-                if acc_name == row[1]:
-                    messagebox.showerror("重複エラー", "同じ口座名がすでに存在します")
+                if acc_name == row[1] and account_type == row[3]:
+                    messagebox.showerror("重複エラー", "同じ口座名・種別の組み合わせがすでに存在します")
                     wb.close()
                     return
 
             new_id = generate_account_id(ws)
-            ws.append([new_id, acc_name, init_balance])
+            ws.append([new_id, acc_name, init_balance, account_type])
             wb.save(EXCEL_FILE)
             wb.close()
 
@@ -58,19 +58,19 @@ def show_add_account_window():
             id_entry.config(state="readonly")
             name_entry.delete(0, tk.END)
             balance_entry.delete(0, tk.END)
+            type_combo.set("")
         except Exception as e:
             messagebox.showerror("エラー", f"登録中にエラーが発生しました\n{e}")
 
     win = tk.Toplevel()
     win.title("口座の追加")
-    win.geometry("400x300")
-    win.minsize(300, 200)
+    win.geometry("400x400")
+    win.minsize(300, 300)
 
     font_label = ("Arial", 12)
     font_entry = ("Arial", 12)
     font_button = ("Arial", 12)
 
-    # 口座ID（読み取り専用）
     tk.Label(win, text="口座ID（自動）", font=font_label).pack(pady=(15, 2))
     id_entry = tk.Entry(win, font=font_entry, state="readonly")
     try:
@@ -89,6 +89,12 @@ def show_add_account_window():
     tk.Label(win, text="初期残高", font=font_label).pack(pady=(10, 2))
     balance_entry = tk.Entry(win, font=font_entry)
     balance_entry.pack(pady=2)
+
+    tk.Label(win, text="口座種別", font=font_label).pack(pady=(10, 2))
+    type_var = tk.StringVar()
+    type_combo = ttk.Combobox(win, textvariable=type_var, state="readonly", font=font_entry)
+    type_combo["values"] = ["普通", "定期", "当座"]
+    type_combo.pack(pady=2)
 
     btn_frame = tk.Frame(win)
     btn_frame.pack(pady=20)

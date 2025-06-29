@@ -14,9 +14,10 @@ def show_balance_window():
 
             accounts = {}
             for row in ws_accounts.iter_rows(min_row=2, values_only=True):
-                account_id, name, initial = row[:3]
+                account_id, name, initial, account_type = row[:4]
+                display_name = f"{name}（{account_type}）"
                 accounts[account_id] = {
-                    "name": name,
+                    "name": display_name,
                     "initial": float(initial),
                     "deposit": 0.0,
                     "withdrawal": 0.0
@@ -34,7 +35,6 @@ def show_balance_window():
                 current = acc["initial"] + acc["deposit"] - acc["withdrawal"]
                 results.append([
                     acc["name"],
-                    acc["initial"],
                     acc["deposit"],
                     acc["withdrawal"],
                     current
@@ -58,8 +58,7 @@ def show_balance_window():
                 r[0],
                 f"{r[1]:,.0f}",
                 f"{r[2]:,.0f}",
-                f"{r[3]:,.0f}",
-                f"{r[4]:,.0f}"
+                f"{r[3]:,.0f}"
             ])
         total_balance_text.set(f"全口座の残高合計：{total:,.0f} 円")
 
@@ -71,12 +70,11 @@ def show_balance_window():
         if not file_path:
             return
         df = pd.DataFrame(
-            [row[:5] for row in current_data],
-            columns=["口座", "初期残高", "合計預入", "合計引出", "現在残高"]
+            [row[:4] for row in current_data],
+            columns=["口座", "合計預入", "合計引出", "現在残高"]
         )
         df_summary = pd.DataFrame([{
             "口座": "全口座の残高合計",
-            "初期残高": "",
             "合計預入": "",
             "合計引出": "",
             "現在残高": current_total
@@ -103,14 +101,14 @@ def show_balance_window():
     balance_win.grid_rowconfigure(2, weight=0)
     balance_win.grid_columnconfigure(0, weight=1)
 
-    tree = ttk.Treeview(balance_win, columns=("口座", "初期残高", "合計預入", "合計引出", "現在残高"), show="headings", height=20)
+    tree = ttk.Treeview(balance_win, columns=("口座", "合計預入", "合計引出", "現在残高"), show="headings", height=20)
     style = ttk.Style()
     style.configure("Treeview.Heading", font=font_label)
     style.configure("Treeview", font=font_tree, rowheight=28)
 
-    for col in ("口座", "初期残高", "合計預入", "合計引出", "現在残高"):
+    for col in ("口座", "合計預入", "合計引出", "現在残高"):
         tree.heading(col, text=col)
-        tree.column(col, width=120, anchor="center", stretch=True)
+        tree.column(col, width=150, anchor="center", stretch=True)
 
     tree.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 

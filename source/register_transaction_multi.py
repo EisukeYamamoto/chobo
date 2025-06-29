@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
+from tkcalendar import DateEntry
 import openpyxl
 import os
 
@@ -16,7 +17,8 @@ def show_register_multi_window():
         ws = wb["口座一覧"]
         accounts = {}
         for row in ws.iter_rows(min_row=2, values_only=True):
-            accounts[row[1]] = row[0]
+            label = f"{row[1]}（{row[3]}）"  # 口座名（種別）
+            accounts[label] = row[0]        # 表示名 : ID
         wb.close()
         return accounts
 
@@ -29,8 +31,8 @@ def show_register_multi_window():
 
         account_dict = load_accounts()
         for row in rows:
-            date_str, account_name, summary, deposit, withdrawal = row
-            account_id = account_dict.get(account_name)
+            date_str, account_label, summary, deposit, withdrawal = row
+            account_id = account_dict.get(account_label)
             if account_id:
                 ws.append([date_str, account_id, summary, deposit, withdrawal, writer])
         wb.save(EXCEL_FILE)
@@ -48,7 +50,6 @@ def show_register_multi_window():
             if not (date and account and summary):
                 continue
 
-            # バリデーション：預入と引出の両方が空
             if (not deposit and not withdrawal):
                 continue
 
@@ -56,7 +57,6 @@ def show_register_multi_window():
                 messagebox.showwarning("入力エラー", f"{i+1}行目に預入と引出が両方入力されています")
                 continue
 
-            # 金額が正の整数かどうかチェック
             try:
                 if deposit:
                     dep = int(deposit)
@@ -108,12 +108,13 @@ def show_register_multi_window():
         tk.Label(win, text=h, font=font).grid(row=0, column=i, padx=2, pady=2)
 
     entry_list = []
-    account_names = list(load_accounts().keys())
+    account_dict = load_accounts()
+    account_labels = list(account_dict.keys())
     for row in range(20):
         date_entry = DateEntry(win, date_pattern='yyyy-mm-dd', font=font)
         date_entry.set_date(datetime.today())
         date_entry.grid(row=row+1, column=0, padx=1, pady=1)
-        account_combo = ttk.Combobox(win, values=account_names, font=font, state="readonly")
+        account_combo = ttk.Combobox(win, values=account_labels, font=font, state="readonly")
         account_combo.grid(row=row+1, column=1, padx=1, pady=1)
         summary_entry = tk.Entry(win, font=font)
         summary_entry.grid(row=row+1, column=2, padx=1, pady=1)
@@ -123,11 +124,9 @@ def show_register_multi_window():
         withdraw_entry.grid(row=row+1, column=4, padx=1, pady=1)
         entry_list.append([date_entry, account_combo, summary_entry, deposit_entry, withdraw_entry])
 
-    # 記入者名
     tk.Label(win, text="記入者", font=font).grid(row=21, column=0, padx=5, pady=10, sticky="e")
     writer_entry = tk.Entry(win, font=font)
     writer_entry.grid(row=21, column=1, padx=5, pady=10, sticky="w")
 
-    # 登録・戻るボタン
     tk.Button(win, text="登録", font=font, command=register_all).grid(row=22, column=0, columnspan=2, pady=10)
     tk.Button(win, text="メニューに戻る", font=font, command=back_to_menu).grid(row=22, column=2, columnspan=2, pady=10)

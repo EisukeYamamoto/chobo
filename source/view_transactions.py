@@ -11,15 +11,19 @@ def show_transaction_window():
     def load_accounts():
         wb = openpyxl.load_workbook(EXCEL_FILE)
         ws = wb["口座一覧"]
-        accounts = {row[1]: row[0] for row in ws.iter_rows(min_row=2, values_only=True)}
+        accounts = {}
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            display_name = f"{row[1]}（{row[3]}）"  # 銀行名（種別）
+            accounts[display_name] = row[0]
         wb.close()
         return accounts
 
     def get_initial_balance(account_name):
+        account_id = accounts[account_name]
         wb = openpyxl.load_workbook(EXCEL_FILE)
         ws = wb["口座一覧"]
         for row in ws.iter_rows(min_row=2, values_only=True):
-            if row[1] == account_name:
+            if row[0] == account_id:
                 wb.close()
                 return float(row[2])
         wb.close()
