@@ -113,8 +113,8 @@ def show_transaction_window():
             return
 
         df = pd.DataFrame(current_results, columns=["日付", "摘要", "預入", "引出", "残高", "記入者"])
-        deposit_total = sum(float(r[2]) for r in current_results if r[2] != "")
-        withdrawal_total = sum(float(r[3]) for r in current_results if r[3] != "")
+        deposit_total = sum(float(r[2].replace(',', '')) for r in current_results if r[2] != "")
+        withdrawal_total = sum(float(r[3].replace(',', '')) for r in current_results if r[3] != "")
 
         df_summary = pd.DataFrame([
             {"日付": "", "摘要": "", "預入": "", "引出": "", "残高": "", "記入者": ""},
