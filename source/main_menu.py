@@ -6,6 +6,8 @@ from register_transaction_multi import show_register_multi_window
 from add_account import show_add_account_window
 from view_balances import show_balance_window
 
+version = "v1.0.0"
+
 root = tk.Tk()
 root.title("帳簿アプリ メニュー")
 root.geometry("400x600")
@@ -15,6 +17,7 @@ font_title = ("Arial", 16, "bold")
 font_button = ("Arial", 14)
 
 tk.Label(root, text="帳簿メニュー", font=font_title, bg="#f0f0f5").pack(pady=20)
+tk.Label(root, text=version, font=("Arial", 10), fg="gray").pack(pady=(0, 10))
 
 def create_colored_button(text, command, bg_color, fg_color="white"):
     return tk.Button(
