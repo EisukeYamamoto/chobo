@@ -79,9 +79,9 @@ def show_transaction_window():
             records.append([
                 r["date"].strftime("%Y-%m-%d"),
                 r["summary"],
-                r["deposit"] if r["deposit"] else "",
-                r["withdrawal"] if r["withdrawal"] else "",
-                current_balance,
+                f"{r['deposit']:,.0f}" if r["deposit"] else "",
+                f"{r['withdrawal']:,.0f}" if r["withdrawal"] else "",
+                f"{current_balance:,.0f}",
                 r["writer"]
             ])
             total_deposit += r["deposit"]
@@ -207,7 +207,10 @@ def show_transaction_window():
 
     for col in ("日付", "摘要", "預入", "引出", "残高", "記入者"):
         tree.heading(col, text=col)
-        tree.column(col, width=120, anchor="center")
+        if col in ("預入", "引出", "残高"):
+            tree.column(col, width=120, anchor="e")
+        else:
+            tree.column(col, width=120, anchor="center")
 
     tree.pack(side="left", fill="both", expand=True)
 

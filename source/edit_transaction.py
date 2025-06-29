@@ -153,7 +153,10 @@ def show_edit_transaction_window():
 
     for col in tree["columns"]:
         tree.heading(col, text=col)
-        tree.column(col, width=160, anchor="center")
+        if col in ("預入", "引出"):
+            tree.column(col, width=160, anchor="e")
+        else:
+            tree.column(col, width=160, anchor="center")
     tree.pack(fill="both", expand=True)
     tree.bind("<<TreeviewSelect>>", on_select)
 
@@ -162,8 +165,8 @@ def show_edit_transaction_window():
             rec[0] or "",
             rec[1] or "",
             rec[2] or "",
-            rec[3] if rec[3] is not None else "",
-            rec[4] if rec[4] is not None else "",
+            f"{rec[3]:,.0f}" if rec[3] else "",
+            f"{rec[4]:,.0f}" if rec[4] else "",
             rec[5] or ""
         ]
         tree.insert("", "end", values=rec_display, tags=(str(idx),))

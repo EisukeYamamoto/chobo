@@ -145,7 +145,10 @@ def show_balance_window():
     tree = ttk.Treeview(tree_frame, columns=("口座", "合計預入", "合計引出", "現在残高"), show="headings")
     for col in ("口座", "合計預入", "合計引出", "現在残高"):
         tree.heading(col, text=col)
-        tree.column(col, anchor="center", width=180)
+        if col in ("合計預入", "合計引出", "現在残高"):
+            tree.column(col, width=180, anchor="e")
+        else:
+            tree.column(col, width=180, anchor="center")
 
     scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
     tree.configure(yscrollcommand=scrollbar.set)
