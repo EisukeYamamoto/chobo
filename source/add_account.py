@@ -62,16 +62,20 @@ def show_add_account_window():
         except Exception as e:
             messagebox.showerror("エラー", f"登録中にエラーが発生しました\n{e}")
 
+    def colored_button(parent, text, command, bg, fg="white"):
+        return tk.Button(parent, text=text, command=command, bg=bg, fg=fg,
+                         activebackground=bg, activeforeground=fg,
+                         font=("Arial", 14), width=10)
+
     win = tk.Toplevel()
     win.title("口座の追加")
-    win.geometry("400x400")
+    win.geometry("400x450")
     win.minsize(300, 300)
 
-    font_label = ("Arial", 12)
-    font_entry = ("Arial", 12)
-    font_button = ("Arial", 12)
+    font_label = ("Arial", 14)
+    font_entry = ("Arial", 14)
 
-    tk.Label(win, text="口座ID（自動）", font=font_label).pack(pady=(15, 2))
+    tk.Label(win, text="口座ID（自動）", font=font_label).pack(pady=(20, 4))
     id_entry = tk.Entry(win, font=font_entry, state="readonly")
     try:
         wb = openpyxl.load_workbook(EXCEL_FILE)
@@ -82,22 +86,22 @@ def show_add_account_window():
     id_entry.insert(0, id_entry_val)
     id_entry.pack(pady=2)
 
-    tk.Label(win, text="口座名", font=font_label).pack(pady=(10, 2))
+    tk.Label(win, text="口座名", font=font_label).pack(pady=(15, 2))
     name_entry = tk.Entry(win, font=font_entry)
     name_entry.pack(pady=2)
 
-    tk.Label(win, text="初期残高", font=font_label).pack(pady=(10, 2))
+    tk.Label(win, text="初期残高", font=font_label).pack(pady=(15, 2))
     balance_entry = tk.Entry(win, font=font_entry)
     balance_entry.pack(pady=2)
 
-    tk.Label(win, text="口座種別", font=font_label).pack(pady=(10, 2))
+    tk.Label(win, text="口座種別", font=font_label).pack(pady=(15, 2))
     type_var = tk.StringVar()
     type_combo = ttk.Combobox(win, textvariable=type_var, state="readonly", font=font_entry)
     type_combo["values"] = ["普通", "定期", "当座"]
     type_combo.pack(pady=2)
 
     btn_frame = tk.Frame(win)
-    btn_frame.pack(pady=20)
+    btn_frame.pack(pady=30)
 
-    tk.Button(btn_frame, text="登録", command=add_account, font=font_button).pack(side="left", padx=10)
-    tk.Button(btn_frame, text="閉じる", command=win.destroy, font=font_button).pack(side="left", padx=10)
+    colored_button(btn_frame, "登録", add_account, bg="#4CAF50").pack(side="left", padx=10)
+    colored_button(btn_frame, "閉じる", win.destroy, bg="#F44336").pack(side="left", padx=10)
