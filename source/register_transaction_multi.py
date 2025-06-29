@@ -128,5 +128,8 @@ def show_register_multi_window():
     writer_entry = tk.Entry(win, font=font)
     writer_entry.grid(row=21, column=1, padx=5, pady=10, sticky="w")
 
-    tk.Button(win, text="登録", font=font, command=register_all).grid(row=22, column=0, columnspan=2, pady=10)
-    tk.Button(win, text="メニューに戻る", font=font, command=back_to_menu).grid(row=22, column=2, columnspan=2, pady=10)
+    button_frame = tk.Frame(win)
+    button_frame.grid(row=22, column=0, columnspan=5, pady=20)
+
+    tk.Button(button_frame, text="登録", font=font, command=register_all, width=15).pack(side="left", padx=20)
+    tk.Button(button_frame, text="メニューに戻る", font=font, command=back_to_menu, width=15).pack(side="left", padx=20)
